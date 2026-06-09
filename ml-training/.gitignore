@@ -6,4 +6,3 @@ __pycache__/
 data/fer2013/
 data/ravdess/
 data/Audio_Speech_Actors_01-24.zip
-data/training.1600000.processed.noemoticon.csv
