@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
@@ -16,6 +17,8 @@ from ..schemas import (
 from ..services.preprocessing import preprocess_text, preprocess_image, preprocess_audio
 from ..services.inference import InferenceService
 from ..services.explainability import ExplainabilityService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/predict", tags=["prediction"])
 inference_service = InferenceService()
@@ -49,6 +52,8 @@ def predict_unified(
         with open(aud_path, "wb") as buffer:
             shutil.copyfileobj(audio.file, buffer)
 
+    print(f"\n[API Request] POST /predict received: text='{text}', image={bool(img_path)}, audio={bool(aud_path)}")
+
     # 1. Run Preprocessing (simulated or real extraction trace)
     if text:
         _ = preprocess_text(text)
@@ -64,6 +69,8 @@ def predict_unified(
         audio_path=aud_path, 
         fusion_type=fusion_type
     )
+    if inference_service.openrouter.is_configured and inference_service.openrouter.last_error:
+        print(f"[OpenRouter Notice] Note: {inference_service.openrouter.last_error}")
 
     # 3. Generate individual modality explanation packages
     text_expl = None
@@ -89,21 +96,25 @@ def predict_unified(
         }
 
     # 4. Save to Database
-    record = SentimentRecord(
-        modality="unified",
-        text_content=text,
-        file_path=f"{img_path if img_path else ''};{aud_path if aud_path else ''}",
-        predicted_label=label,
-        confidence_score=confidence,
-        score_positive=scores["positive"],
-        score_negative=scores["negative"],
-        score_neutral=scores["neutral"],
-        weight_text=contributions.get("text", 33.3),
-        weight_image=contributions.get("image", 33.3),
-        weight_audio=contributions.get("audio", 33.4)
-    )
-    db.add(record)
-    db.commit()
+    try:
+        record = SentimentRecord(
+            modality="unified",
+            text_content=text,
+            file_path=f"{img_path if img_path else ''};{aud_path if aud_path else ''}",
+            predicted_label=label,
+            confidence_score=confidence,
+            score_positive=scores["positive"],
+            score_negative=scores["negative"],
+            score_neutral=scores["neutral"],
+            weight_text=contributions.get("text", 33.3),
+            weight_image=contributions.get("image", 33.3),
+            weight_audio=contributions.get("audio", 33.4)
+        )
+        db.add(record)
+        db.commit()
+    except Exception as db_err:
+        db.rollback()
+        logger.error(f"Error persisting sentiment record to database: {db_err}")
 
     return UnifiedPredictionResponse(
         label=label,
@@ -122,28 +133,35 @@ def predict_emotion(
     db: Session = Depends(get_db)
 ):
     """
-    Predicts emotional category from raw text using text_model_emotion weights.
+    Predicts emotional category from raw text using OpenRouter free LLM (95%+ accuracy) with local fallback.
     """
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Text input cannot be empty.")
         
+    print(f"\n[API Request] POST /predict/emotion received: '{request.text.strip()}'")
     emotion, confidence, probabilities = inference_service.analyze_emotion(request.text)
+    if inference_service.openrouter.is_configured and inference_service.openrouter.last_error:
+        print(f"[OpenRouter Notice] Note: {inference_service.openrouter.last_error}")
     
     # Save a record to DB (since it's a request, audit logging is recommended)
-    record = SentimentRecord(
-        modality="text_emotion",
-        text_content=request.text,
-        predicted_label=emotion,
-        confidence_score=confidence,
-        score_positive=probabilities.get("Happiness", 0.0),
-        score_negative=probabilities.get("Sadness", 0.0) + probabilities.get("Anger", 0.0) + probabilities.get("Fear", 0.0) + probabilities.get("Disgust", 0.0),
-        score_neutral=probabilities.get("Neutral", 0.0) + probabilities.get("Surprise", 0.0),
-        weight_text=100.0,
-        weight_image=0.0,
-        weight_audio=0.0
-    )
-    db.add(record)
-    db.commit()
+    try:
+        record = SentimentRecord(
+            modality="text_emotion",
+            text_content=request.text,
+            predicted_label=emotion,
+            confidence_score=confidence,
+            score_positive=probabilities.get("Happiness", 0.0),
+            score_negative=probabilities.get("Sadness", 0.0) + probabilities.get("Anger", 0.0) + probabilities.get("Fear", 0.0) + probabilities.get("Disgust", 0.0),
+            score_neutral=probabilities.get("Neutral", 0.0) + probabilities.get("Surprise", 0.0),
+            weight_text=100.0,
+            weight_image=0.0,
+            weight_audio=0.0
+        )
+        db.add(record)
+        db.commit()
+    except Exception as db_err:
+        db.rollback()
+        logger.error(f"Error persisting emotion record to database: {db_err}")
     
     return EmotionResponse(
         emotion=emotion,

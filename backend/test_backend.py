@@ -49,5 +49,29 @@ class TestBackendAPI(unittest.TestCase):
         self.assertIn("probabilities", data)
         self.assertEqual(len(data["probabilities"]), 7)
 
+    def test_openrouter_mock_sentiment(self):
+        from unittest.mock import patch
+        with patch("app.services.openrouter_service.OpenRouterService.is_configured", True):
+            with patch("app.services.openrouter_service.OpenRouterService._call_openrouter") as mock_call:
+                mock_call.return_value = '{"label": "Positive", "confidence": 0.98, "scores": {"positive": 0.98, "negative": 0.01, "neutral": 0.01}}'
+                response = self.client.post("/predict", data={"text": "Outstanding service and experience!"})
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertEqual(data["label"], "Positive")
+                self.assertAlmostEqual(data["confidence"], 0.98, places=2)
+                self.assertAlmostEqual(data["scores"]["positive"], 0.98, places=2)
+
+    def test_openrouter_mock_emotion(self):
+        from unittest.mock import patch
+        with patch("app.services.openrouter_service.OpenRouterService.is_configured", True):
+            with patch("app.services.openrouter_service.OpenRouterService._call_openrouter") as mock_call:
+                mock_call.return_value = '{"emotion": "Happiness", "confidence": 0.96, "probabilities": {"Happiness": 0.96, "Sadness": 0.01, "Anger": 0.01, "Fear": 0.0, "Surprise": 0.01, "Disgust": 0.0, "Neutral": 0.01}}'
+                response = self.client.post("/predict/emotion", json={"text": "I am thrilled and ecstatic!"})
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertEqual(data["emotion"], "Happiness")
+                self.assertAlmostEqual(data["confidence"], 0.96, places=2)
+                self.assertIn("Happiness", data["probabilities"])
+
 if __name__ == "__main__":
     unittest.main()

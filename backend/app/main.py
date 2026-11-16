@@ -1,6 +1,11 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .services.openrouter_service import load_env_file
+
+# Load environment configuration (.env)
+load_env_file()
+
 from .database import engine, Base
 from .routers import predict, metrics, datasets
 

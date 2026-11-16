@@ -13,6 +13,19 @@ __pycache__/
 .coverage
 htmlcov/
 
-# OS files
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# OS & macOS metadata
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+.vscode
+backend/.env.example
+.env.example
