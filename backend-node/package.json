@@ -1,0 +1,25 @@
+{
+  "name": "sentimind-backend-node",
+  "version": "1.0.0",
+  "description": "Node.js Express backend for SentiMind Multimodal Sentiment Analysis Platform with OpenRouter AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "sentiment-analysis",
+    "multimodal",
+    "openrouter",
+    "fastapi-compatible",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
