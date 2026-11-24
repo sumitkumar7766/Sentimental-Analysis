@@ -1,16 +1,30 @@
+# FastAPI Web Server & API Framework
 fastapi>=0.100.0
 uvicorn>=0.22.0
 pydantic>=2.0.0
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0
 python-multipart>=0.0.6
+
+# OpenRouter API & Environment Variables (Windows / Mac / Linux)
+python-dotenv>=1.0.0
+requests>=2.28.0
+httpx>=0.24.0
+
+# Database Persistence
+sqlalchemy>=2.0.0
+
+# Deep Learning & Transformers (PyTorch)
 torch>=2.0.0
 torchvision>=0.15.0
 torchaudio>=2.0.0
 transformers>=4.28.0
+datasets>=2.12.0
+
+# Scientific, Audio & Image Processing (Soundfile required for Windows audio)
 numpy>=1.22.0
 scipy>=1.8.0
-librosa>=0.9.0
 pillow>=9.0.0
+librosa>=0.9.0
+soundfile>=0.12.0
+
+# Testing
 pytest>=7.0.0
-datasets>=2.12.0

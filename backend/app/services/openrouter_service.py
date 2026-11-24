@@ -12,12 +12,20 @@ logger = logging.getLogger(__name__)
 def load_env_file():
     """
     Loads environment variables from backend/.env or root .env into os.environ
-    if not already defined or if empty.
+    if not already defined or if empty. Supports python-dotenv if installed.
     """
     possible_paths = [
         os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env"), # backend/.env
         os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), ".env"), # project-root/.env
     ]
+    try:
+        from dotenv import load_dotenv
+        for path in possible_paths:
+            if os.path.isfile(path):
+                load_dotenv(path, override=False)
+    except ImportError:
+        pass
+
     for path in possible_paths:
         if os.path.isfile(path):
             try:
